@@ -1710,7 +1710,15 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
+  // shouldYield 表示当前浏览器帧没有剩余的时间给我们来执行js了，需要将js的运行工作暂停
+  // workInProgress 可以表示为当前内存中是否存在 workInProgress Fiber
+  // 如果内存中不存在workInProgress了，即表示内存中的虚拟DOM Fiber已计算完毕，提交给了 commit阶段，用来在UI上渲染了
   while (workInProgress !== null && !shouldYield()) {
+    // 计算单位时间切片内的workInProgress， 每一次计算结束，会产生一个新的 workInProgress，替换原来内存中的 workInProgress
+    // workInProgress 存储的是一个Fiber, 每次计算会产生一个新的Fiber, 然后会将这个Fiber赋值给 workInProgress
+    // 所有的计算都是在 Fiber 上进行的
+    // 下一次计算时，将内存中当前的workInProgress拿到当做起始值，继续计算，直到计算结束
+    // 整个逻辑类似于 Generator的 yield机制。 yield暂停 Generator，并返回一个 值。当下一次有空闲时间了，调用next(),继续之前的计算
     performUnitOfWork(workInProgress);
   }
 }
