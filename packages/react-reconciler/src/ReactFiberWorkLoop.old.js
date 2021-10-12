@@ -517,6 +517,7 @@ export function scheduleUpdateOnFiber(
     }
   }
 
+  // 在这里将performSyncWorkOnRoot添加到callback中，然后在 flushSyncCallbacks中调用
   ensureRootIsScheduled(root, eventTime);
   if (
     lane === SyncLane &&
@@ -1031,9 +1032,6 @@ function isRenderConsistentWithExternalStores(finishedWork: Fiber): boolean {
     node.sibling.return = node.return;
     node = node.sibling;
   }
-  // Flow doesn't know this is unreachable, but eslint does
-  // eslint-disable-next-line no-unreachable
-  return true;
 }
 
 function markRootSuspended(root, suspendedLanes) {
@@ -1192,6 +1190,8 @@ declare function flushSync<R>(fn: () => R): R;
 // eslint-disable-next-line no-redeclare
 declare function flushSync(): void;
 // eslint-disable-next-line no-redeclare
+// 刷新同步优先级
+// 在传统模式下，我们会在下一个事件开始时刷新挂起的被动效果，而不是在上一个事件结束时。
 export function flushSync(fn) {
   // In legacy mode, we flush pending passive effects at the beginning of the
   // next event, not at the end of the previous one.
@@ -1200,7 +1200,7 @@ export function flushSync(fn) {
     rootWithPendingPassiveEffects.tag === LegacyRoot &&
     (executionContext & (RenderContext | CommitContext)) === NoContext
   ) {
-    flushPassiveEffects();
+    flushPassiveEffects(); // 刷新被动效果
   }
 
   const prevExecutionContext = executionContext;

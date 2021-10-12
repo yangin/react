@@ -104,9 +104,10 @@ function getReactRootElementInContainer(container: any) {
 
 function legacyCreateRootFromDOMContainer(
   container: Container,
-  forceHydrate: boolean,
+  forceHydrate: boolean, // 是否强制混合  ？？
 ): FiberRoot {
   // First clear any existing content.
+  // 第一次时，清理 container下的所有子节点
   if (!forceHydrate) {
     let rootSibling;
     while ((rootSibling = container.lastChild)) {
@@ -114,14 +115,18 @@ function legacyCreateRootFromDOMContainer(
     }
   }
 
+  // root 为一个 FiberRootNode 对象， FiberRootNode.current 为一个 Fiber对象,   Fiber.queue为 初始的queue对象
   const root = createContainer(
     container,
-    LegacyRoot,
+    LegacyRoot, // root节点标识，值为 0
     forceHydrate,
     null, // hydrationCallbacks
     false, // isStrictMode
     false, // concurrentUpdatesByDefaultOverride,
   );
+
+  // node[internalContainerInstanceKey] = hostRoot;
+  // 给container添加 internalContainerInstanceKey 属性，并使其值为 rootFiber, 一个Fiber对象
   markContainerAsRoot(root.current, container);
 
   const rootContainerElement =
@@ -144,12 +149,13 @@ function warnOnInvalidCallback(callback: mixed, callerName: string): void {
   }
 }
 
+// 渲染子树到contaier容器中
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
   children: ReactNodeList,
   container: Container,
   forceHydrate: boolean,
-  callback: ?Function,
+  callback: ?Function, // 首次渲染（即mount）时，callback 为 null
 ) {
   if (__DEV__) {
     topLevelUpdateWarnings(container);
@@ -160,6 +166,8 @@ function legacyRenderSubtreeIntoContainer(
   let fiberRoot: FiberRoot;
   if (!root) {
     // Initial mount
+    // 通过传入的container节点， 创建fiberRoot。即给 container 添加了 _reactRootContainer 属性，标识其为 react的 fiberRoot
+    // 在 legacyCreateRootFromDOMContainer 时，同时为跟节点container添加了 所有的事件监听
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
@@ -173,8 +181,9 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // 刷新执行的优先级
     flushSync(() => {
-      updateContainer(children, fiberRoot, parentComponent, callback);
+      updateContainer(children, fiberRoot, parentComponent, callback); // 返回的是一个 Lane， render时，值为NoLane
     });
   } else {
     fiberRoot = root;
@@ -217,10 +226,6 @@ export function findDOMNode(
   if ((componentOrElement: any).nodeType === ELEMENT_NODE) {
     return (componentOrElement: any);
   }
-  if (__DEV__) {
-    return findHostInstanceWithWarning(componentOrElement, 'findDOMNode');
-  }
-  return findHostInstance(componentOrElement);
 }
 
 export function hydrate(

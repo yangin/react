@@ -55,6 +55,7 @@ function FiberRootNode(containerInfo, tag, hydrate) {
   this.entangledLanes = NoLanes;
   this.entanglements = createLaneMap(NoLanes);
 
+  // enableCache 是由全局变量 __EXPERIMENTAL__ 来控制的，在webpack中配置
   if (enableCache) {
     this.pooledCache = null;
     this.pooledCacheLanes = NoLanes;
@@ -93,6 +94,8 @@ function FiberRootNode(containerInfo, tag, hydrate) {
   }
 }
 
+// 创建FiberRoot, 即通过render传进来的container容器，将其作为根节点
+// 此处返回的是一个 FiberRootNode 对象，其中的 FiberRootNode.current 为 具有root先关属性的Fiber对象, Fiber.queue为 初始对象
 export function createFiberRoot(
   containerInfo: any,
   tag: RootTag,
@@ -101,6 +104,7 @@ export function createFiberRoot(
   isStrictMode: boolean,
   concurrentUpdatesByDefaultOverride: null | boolean,
 ): FiberRoot {
+  // root为一个 FiberRootNode 对象
   const root: FiberRoot = (new FiberRootNode(containerInfo, tag, hydrate): any);
   if (enableSuspenseCallback) {
     root.hydrationCallbacks = hydrationCallbacks;
@@ -108,12 +112,13 @@ export function createFiberRoot(
 
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
+  // uninitializedFiber 为一个 Fiber, 创建createFiberRoot 时，tag = HostRoot, 即值为0
   const uninitializedFiber = createHostRootFiber(
     tag,
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
   );
-  root.current = uninitializedFiber;
+  root.current = uninitializedFiber; // 即root.current 为一个标记为 HostRoot 的 Fiber
   uninitializedFiber.stateNode = root;
 
   if (enableCache) {
@@ -131,6 +136,7 @@ export function createFiberRoot(
     uninitializedFiber.memoizedState = initialState;
   }
 
+  // 初始化rootFiber中的一些关键属性，使其为初始值，这里是 rootFiber对象中（即Fiber）的 queue 为初始值，queue对象里面一些关键值为null
   initializeUpdateQueue(uninitializedFiber);
 
   return root;

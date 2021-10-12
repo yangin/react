@@ -253,17 +253,17 @@ export function createContainer(
 }
 
 export function updateContainer(
-  element: ReactNodeList,
-  container: OpaqueRoot,
+  element: ReactNodeList, // render 要添加的节点，即render()的第一个参数
+  container: OpaqueRoot, // render的根节点，即render()的第二个参数
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): Lane {
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
-  const current = container.current;
-  const eventTime = requestEventTime();
-  const lane = requestUpdateLane(current);
+  const current = container.current; // current 为一个 Fiber
+  const eventTime = requestEventTime(); 
+  const lane = requestUpdateLane(current); // lane 用来表示update的优先级
 
   if (enableSchedulingProfiler) {
     markRenderScheduled(lane);

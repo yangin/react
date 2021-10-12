@@ -368,6 +368,7 @@ export function getCurrentTime() {
   return now();
 }
 
+// 返回一个 Lane, Lane 共有 SyncLane、InputContinuousLane、DefaultLane、IdleLane、NoLane 5种
 export function requestUpdateLane(fiber: Fiber): Lane {
   // Special cases
   const mode = fiber.mode;
@@ -390,7 +391,8 @@ export function requestUpdateLane(fiber: Fiber): Lane {
     return pickArbitraryLane(workInProgressRootRenderLanes);
   }
 
-  const isTransition = requestCurrentTransition() !== NoTransition;
+  // 当存在过度时
+  const isTransition = requestCurrentTransition() !== NoTransition; // 是否需要过度
   if (isTransition) {
     if (
       __DEV__ &&
@@ -1031,9 +1033,6 @@ function isRenderConsistentWithExternalStores(finishedWork: Fiber): boolean {
     node.sibling.return = node.return;
     node = node.sibling;
   }
-  // Flow doesn't know this is unreachable, but eslint does
-  // eslint-disable-next-line no-unreachable
-  return true;
 }
 
 function markRootSuspended(root, suspendedLanes) {

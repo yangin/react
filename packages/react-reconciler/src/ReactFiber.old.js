@@ -118,15 +118,15 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // 作为静态数据结构的属性, 保存了组建相关信息
-  this.tag = tag;            // Fiber对应组件的类型 Function/Class/Host...
-  this.key = key;            // key属性
-  this.elementType = null;   // 大部分情况同type，某些情况不同，比如FunctionComponent使用React.memo包裹
-  this.type = null;          // 对于 FunctionComponent，指函数本身，对于ClassComponent，指class，对于HostComponent，指DOM节点tagName
-  this.stateNode = null;     // Fiber对应的真实DOM节点
+  this.tag = tag; // Fiber对应组件的类型 Function/Class/Host...
+  this.key = key; // key属性
+  this.elementType = null; // 大部分情况同type，某些情况不同，比如FunctionComponent使用React.memo包裹
+  this.type = null; // 对于 FunctionComponent，指函数本身，对于ClassComponent，指class，对于HostComponent，指DOM节点tagName
+  this.stateNode = null; // Fiber对应的真实DOM节点
 
    // 用于连接其他Fiber节点形成Fiber树
-  this.return = null;  // 指向父级Fiber节点 
-  this.child = null;   // 指向子Fiber节点
+  this.return = null; // 指向父级Fiber节点 
+  this.child = null; // 指向子Fiber节点
   this.sibling = null; // 指向右边第一个兄弟Fiber节点
   this.index = 0;
 
@@ -139,7 +139,9 @@ function FiberNode(
   this.memoizedState = null;
   this.dependencies = null;
 
-  this.mode = mode;
+  // mode的值为NoMode、ConcurrentMode、ProfileMode，表示通过哪种方式来createRoot的，或者说来添加节点的
+  // NoMode 为传统模式，ConcurrentMode为异步更新模式
+  this.mode = mode; 
 
   // 保存本次更新会造成的DOM操作
   this.flags = NoFlags;
@@ -207,10 +209,10 @@ function FiberNode(
 // 5) It should be easy to port this to a C struct and keep a C implementation
 //    compatible.
 const createFiber = function(
-  tag: WorkTag,
-  pendingProps: mixed,
-  key: null | string,
-  mode: TypeOfMode,
+  tag: WorkTag, // createRootFiber时，值为3，即为HostRoot
+  pendingProps: mixed, // createRootFiber时，值为null
+  key: null | string, // createRootFiber时，值为null
+  mode: TypeOfMode, // 通过render createRoot时，mode = NoMode, 值为0b000000
 ): Fiber {
   // $FlowFixMe: the shapes are exact here but Flow doesn't like constructors
   return new FiberNode(tag, pendingProps, key, mode);

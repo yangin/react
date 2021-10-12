@@ -323,9 +323,9 @@ export function listenToNonDelegatedEvent(
 }
 
 export function listenToNativeEvent(
-  domEventName: DOMEventName,
-  isCapturePhaseListener: boolean,
-  target: EventTarget,
+  domEventName: DOMEventName, // 事件名
+  isCapturePhaseListener: boolean, // 是否为捕获阶段监听器
+  target: EventTarget, // 绑定事件的容器，Element对象
 ): void {
   if (__DEV__) {
     if (nonDelegatedEvents.has(domEventName) && !isCapturePhaseListener) {
@@ -382,6 +382,7 @@ const listeningMarker =
     .toString(36)
     .slice(2);
 
+// 为根节点绑定事件监听
 export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
   if (!(rootContainerElement: any)[listeningMarker]) {
     (rootContainerElement: any)[listeningMarker] = true;
@@ -389,9 +390,12 @@ export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
       // We handle selectionchange separately because it
       // doesn't bubble and needs to be on the document.
       if (domEventName !== 'selectionchange') {
+         // 如果事件不在禁用列表中，则添加, 非捕获阶段
         if (!nonDelegatedEvents.has(domEventName)) {
           listenToNativeEvent(domEventName, false, rootContainerElement);
         }
+
+        // 捕获阶段添加绑定所有事件
         listenToNativeEvent(domEventName, true, rootContainerElement);
       }
     });

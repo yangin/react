@@ -234,13 +234,16 @@ function findHostInstanceWithWarning(
   return findHostInstance(component);
 }
 
+// 创建容器
+// 将通过render传入进来的container进行removeChild后，重新创建一个rootContainer
+// 实际返回的是一个 FiberRootNode 对象，其.current为Fiber
 export function createContainer(
-  containerInfo: Container,
-  tag: RootTag,
-  hydrate: boolean,
-  hydrationCallbacks: null | SuspenseHydrationCallbacks,
-  isStrictMode: boolean,
-  concurrentUpdatesByDefaultOverride: null | boolean,
+  containerInfo: Container, // render传入进来的 container
+  tag: RootTag, // 首次时，值为 0
+  hydrate: boolean, // 首次为 false
+  hydrationCallbacks: null | SuspenseHydrationCallbacks, // render首次调用时为null
+  isStrictMode: boolean, // render首次调用时为false
+  concurrentUpdatesByDefaultOverride: null | boolean, // render首次调用时为false
 ): OpaqueRoot {
   return createFiberRoot(
     containerInfo,
