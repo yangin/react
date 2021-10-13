@@ -607,6 +607,10 @@ export function isInterleavedUpdate(fiber: Fiber, lane: Lane) {
 // of the existing task is the same as the priority of the next level that the
 // root has work on. This function is called on every update, and right before
 // exiting a task.
+
+// 使用此功能为 root 安排任务。 每个 root 只有一个任务(这里通常是将performSyncWorkOnRoot 放入 syncQueue中，待flushSyncCallBacks时执行)； 
+// 如果已经安排了一个任务，我们将检查以确保现有任务的优先级与根正在处理的下一个级别的优先级相同。 
+// 每次更新时都会调用此函数，并在退出任务之前调用此函数。
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   const existingCallbackNode = root.callbackNode;
 
@@ -615,6 +619,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
+  // 确定下一个要工作的车道，以及它们的优先级。
   const nextLanes = getNextLanes(
     root,
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
@@ -631,9 +636,11 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   }
 
   // We use the highest priority lane to represent the priority of the callback.
+  // 我们使用最高优先级的通道来表示回调的优先级。
   const newCallbackPriority = getHighestPriorityLane(nextLanes);
 
   // Check if there's an existing task. We may be able to reuse it.
+  // 查是否存在现有任务。 我们或许可以重用它。
   const existingCallbackPriority = root.callbackPriority;
   if (
     existingCallbackPriority === newCallbackPriority &&
@@ -1046,6 +1053,7 @@ function markRootSuspended(root, suspendedLanes) {
 
 // This is the entry point for synchronous tasks that don't go
 // through Scheduler
+// 在root上执行同步工作
 function performSyncWorkOnRoot(root) {
   if (enableProfilerTimer && enableProfilerNestedUpdatePhase) {
     syncNestedUpdateFlag();
@@ -1191,10 +1199,17 @@ declare function flushSync<R>(fn: () => R): R;
 declare function flushSync(): void;
 // eslint-disable-next-line no-redeclare
 // 刷新同步优先级
-// 在传统模式下，我们会在下一个事件开始时刷新挂起的被动效果，而不是在上一个事件结束时。
 export function flushSync(fn) {
   // In legacy mode, we flush pending passive effects at the beginning of the
   // next event, not at the end of the previous one.
+  // 在传统模式下，我们会在下一个事件开始时刷新挂起的被动效果，而不是在上一个事件结束时。
+
+  // rootWithPendingPassiveEffects 
+  // rootWithPendingPassiveEffects.tag 的值为 LegacyRoot、
+  // executionContext 执行上下文
+  // RenderContext 渲染上下文
+  // CommitContext 提交上下文
+  // NoContext 无上下文，值为0
   if (
     rootWithPendingPassiveEffects !== null &&
     rootWithPendingPassiveEffects.tag === LegacyRoot &&
@@ -1224,6 +1239,7 @@ export function flushSync(fn) {
     // Note that this will happen even if batchedUpdates is higher up
     // the stack.
     if ((executionContext & (RenderContext | CommitContext)) === NoContext) {
+      // 在这里将放入syncQueue中的callback依次回调执行，直到结束
       flushSyncCallbacks();
     }
   }
@@ -1470,6 +1486,7 @@ export function renderHasNotSuspendedYet(): boolean {
   return workInProgressRootExitStatus === RootIncomplete;
 }
 
+// 同步渲染root
 function renderRootSync(root: FiberRoot, lanes: Lanes) {
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
@@ -1507,6 +1524,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
     markRenderStarted(lanes);
   }
 
+  // 核心流程，执行 workLoopSync
   do {
     try {
       workLoopSync();
@@ -1546,9 +1564,11 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 }
 
 // The work loop is an extremely hot path. Tell Closure not to inline it.
+// 工作循环是一个非常热的路径。 告诉 Closure 不要内联它。
 /** @noinline */
 function workLoopSync() {
   // Already timed out, so perform work without checking if we need to yield.
+  // 当内存中存在workInProgress时，继续利用切片时间执行 performUnitOfWork， 其中workInProgress为上一次performUnitOfWork的执行结果，为一个Fiber
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
   }
@@ -1641,6 +1661,7 @@ function workLoopConcurrent() {
   }
 }
 
+// 执行时间切片下的工作单元
 function performUnitOfWork(unitOfWork: Fiber): void {
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't

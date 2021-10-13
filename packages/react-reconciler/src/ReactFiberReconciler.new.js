@@ -252,6 +252,8 @@ export function createContainer(
   );
 }
 
+// 在updateContainer 中 调用了 scheduleUpdateOnFiber 方法
+// scheduleUpdateOnFiber 方法在 Fiber上调度update, 即将一个 callback放入到 syncQueue中去，然后供 flushSyncCallbacks 调取执行
 export function updateContainer(
   element: ReactNodeList, // render 要添加的节点，即render()的第一个参数
   container: OpaqueRoot, // render的根节点，即render()的第二个参数

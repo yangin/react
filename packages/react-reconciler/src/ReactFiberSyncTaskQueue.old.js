@@ -16,10 +16,11 @@ import {
 } from './ReactEventPriorities.old';
 import {ImmediatePriority, scheduleCallback} from './Scheduler';
 
-let syncQueue: Array<SchedulerCallback> | null = null;
+let syncQueue: Array<SchedulerCallback> | null = null; // callback调度队列，将需要执行的callback放入其中，在 flushSyncCallbacks 中来统一执行
 let includesLegacySyncCallbacks: boolean = false;
 let isFlushingSyncQueue: boolean = false;
 
+// 往syncQueue 中添加 callback
 export function scheduleSyncCallback(callback: SchedulerCallback) {
   // Push this callback into an internal queue. We'll flush these either in
   // the next tick, or earlier if something calls `flushSyncCallbackQueue`.
@@ -32,6 +33,7 @@ export function scheduleSyncCallback(callback: SchedulerCallback) {
   }
 }
 
+// 传统往syncQueue 中添加 callback
 export function scheduleLegacySyncCallback(callback: SchedulerCallback) {
   includesLegacySyncCallbacks = true;
   scheduleSyncCallback(callback);
@@ -48,10 +50,12 @@ export function flushSyncCallbacksOnlyInLegacyMode() {
   }
 }
 
+// 执行syncQueue中的所有callback
 export function flushSyncCallbacks() {
+  // 当不存在正在执行的 flushSyncCallbacks ，且syncQueue != null 时，取出syncQueue中的callback并依次执行完，执行完后将 syncQueue = null
   if (!isFlushingSyncQueue && syncQueue !== null) {
     // Prevent re-entrance.
-    isFlushingSyncQueue = true;
+    isFlushingSyncQueue = true; // 是否正在执行syncQueue中的回调
     let i = 0;
     const previousUpdatePriority = getCurrentUpdatePriority();
     try {
