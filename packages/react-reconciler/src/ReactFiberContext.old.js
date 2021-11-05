@@ -30,10 +30,12 @@ if (__DEV__) {
 }
 
 // A cursor to the current merged context object on the stack.
+// 一个栈游标，指向堆栈上当前合并上下文对象的游标。
 const contextStackCursor: StackCursor<Object> = createCursor(
   emptyContextObject,
 );
 // A cursor to a boolean indicating whether the context has changed.
+// 指示上下文是否已更改的布尔值的游标。
 const didPerformWorkStackCursor: StackCursor<boolean> = createCursor(false);
 // Keep track of the previous context object that was on the stack.
 // We use this to get access to the parent context after we have already

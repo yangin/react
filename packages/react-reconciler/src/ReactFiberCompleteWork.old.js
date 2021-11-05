@@ -263,6 +263,8 @@ if (supportsMutation) {
     // TODO: Experiencing an error where oldProps is null. Suggests a host
     // component is hitting the resume path. Figure out why. Possibly
     // related to `hidden`.
+    // 通过prepareUpdate 来更新 DOM节点上的属性，如onClick、onChange等回调函数的注册、处理style prop、处理DANGEROUSLY_SET_INNER_HTML prop， 处理children prop
+    // updatePayload 数据格式：数组形式([key1,value1,key2,value2,...])
     const updatePayload = prepareUpdate(
       instance,
       type,
@@ -895,6 +897,7 @@ function completeWork(
           markRef(workInProgress);
         }
       } else {
+        // mount阶段将子孙DOM节点插入到刚生成的DOM节点中
         if (!newProps) {
           if (workInProgress.stateNode === null) {
             throw new Error(
@@ -937,6 +940,7 @@ function completeWork(
             workInProgress,
           );
 
+          // TODO: 关键：将所有的子集追加到当前的fiber的stateNode上，通过遍历层层向上，最终‘归’到rootFiber时，们已经有一个构建好的离屏DOM树
           appendAllChildren(instance, workInProgress, false, false);
 
           workInProgress.stateNode = instance;
@@ -945,6 +949,7 @@ function completeWork(
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
           if (
+            // 初始化DOM对象的事件监听器合内部属性
             finalizeInitialChildren(
               instance,
               type,

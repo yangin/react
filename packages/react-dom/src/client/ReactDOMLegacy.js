@@ -104,7 +104,7 @@ function getReactRootElementInContainer(container: any) {
 
 function legacyCreateRootFromDOMContainer(
   container: Container,
-  forceHydrate: boolean, // 是否强制混合  ？？
+  forceHydrate: boolean, // 待渲染元素是否往container里强制混合，默认为false, 即会先清理 container的所有子集。
 ): FiberRoot {
   // First clear any existing content.
   // 第一次时，清理 container下的所有子节点
@@ -119,11 +119,11 @@ function legacyCreateRootFromDOMContainer(
   const root = createContainer(
     container,
     LegacyRoot, // root节点标识，值为 0
-    forceHydrate,
+    forceHydrate, 
     null, // hydrationCallbacks
     false, // isStrictMode
     false, // concurrentUpdatesByDefaultOverride,
-  );
+  ); 
 
   // node[internalContainerInstanceKey] = hostRoot;
   // 给container添加 internalContainerInstanceKey 属性，并使其值为 rootFiber, 一个Fiber对象
@@ -149,6 +149,7 @@ function warnOnInvalidCallback(callback: mixed, callerName: string): void {
   }
 }
 
+
 // 渲染子树到contaier容器中
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
@@ -168,13 +169,14 @@ function legacyRenderSubtreeIntoContainer(
     // Initial mount
     // 通过传入的container节点， 创建fiberRoot。即给 container 添加了 _reactRootContainer 属性，标识其为 react的 fiberRoot
     // 在 legacyCreateRootFromDOMContainer 时，同时为跟节点container添加了 所有的事件监听
+    // 在这里创建了一个Fiber.tag = LegacyRoot 的 Fiber
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
     );
-    fiberRoot = root;
+    fiberRoot = root; 
     if (typeof callback === 'function') {
-      const originalCallback = callback;
+      const originalCallback = callback; 
       callback = function() {
         const instance = getPublicRootInstance(fiberRoot);
         originalCallback.call(instance);

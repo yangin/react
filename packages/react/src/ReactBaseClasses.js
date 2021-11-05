@@ -25,19 +25,24 @@ function Component(props, context, updater) {
   this.updater = updater || ReactNoopUpdateQueue;
 }
 
+// 组件extends Component 后，会被打伤 isReactComponent 标记，即存在 isReactComponent 属性
 Component.prototype.isReactComponent = {};
 
 /**
  * Sets a subset of the state. Always use this to mutate
  * state. You should treat `this.state` as immutable.
+ * 设置子集的状态。总是使用这个来改变状态。你应该对待`this.state`像immutable一样。
  *
  * There is no guarantee that `this.state` will be immediately updated, so
  * accessing `this.state` after calling this method may return the old value.
+ * 不保证立即更新，所以在调用此方法后访问this.state可能会返回旧值
  *
  * There is no guarantee that calls to `setState` will run synchronously,
  * as they may eventually be batched together.  You can provide an optional
  * callback that will be executed when the call to setState is actually
  * completed.
+ * 不保证调用setState将会同步运行，因为它们可能在最终会被批量合并。
+ * 你可以提供一个callback，它将在实际完成调用setState时执行。
  *
  * When a function is provided to setState, it will be called at some point in
  * the future (not synchronously). It will be called with the up to date
@@ -45,6 +50,10 @@ Component.prototype.isReactComponent = {};
  * from this.* because your function may be called after receiveProps but before
  * shouldComponentUpdate, and this new state, props, and context will not yet be
  * assigned to this.
+ * 当一个function被提供给setState时，它将在未来某个时候被调用（不是同步的）。
+ * 它将被调用当前组件参数（state，props，context）。
+ * 这些值可以不同于this.*因为你的function可能在receiveProps后被调用，而不是shouldComponentUpdate之前，
+ * 这个新的state，props和context还没有被分配给this。
  *
  * @param {object|function} partialState Next partial state or function to
  *        produce next partial state to be merged with current state.
@@ -64,6 +73,7 @@ Component.prototype.setState = function(partialState, callback) {
     );
   }
 
+  // 将state update需求放入updater队列， 标记为setState
   this.updater.enqueueSetState(this, partialState, callback, 'setState');
 };
 
@@ -73,15 +83,18 @@ Component.prototype.setState = function(partialState, callback) {
  *
  * You may want to call this when you know that some deeper aspect of the
  * component's state has changed but `setState` was not called.
+ * 当你知道组件的某个深层状态发生了变化，但是setState没有被调用时，你可以调用这个方法。
  *
  * This will not invoke `shouldComponentUpdate`, but it will invoke
  * `componentWillUpdate` and `componentDidUpdate`.
+ * 这将不会调用shouldComponentUpdate，但是会调用componentWillUpdate和componentDidUpdate。
  *
  * @param {?function} callback Called after update is complete.
  * @final
  * @protected
  */
 Component.prototype.forceUpdate = function(callback) {
+  // 将callback放入updater队列， 标记为forceUpdate
   this.updater.enqueueForceUpdate(this, callback, 'forceUpdate');
 };
 
@@ -140,6 +153,7 @@ const pureComponentPrototype = (PureComponent.prototype = new ComponentDummy());
 pureComponentPrototype.constructor = PureComponent;
 // Avoid an extra prototype jump for these methods.
 Object.assign(pureComponentPrototype, Component.prototype);
-pureComponentPrototype.isPureReactComponent = true;
+// PureComponent 与 Component的区别在于， PureComponent 被标记了isPureReactComponent, 这回使 PureComponent不会调用shouldComponentUpdate
+pureComponentPrototype.isPureReactComponent = true; 
 
 export {Component, PureComponent};

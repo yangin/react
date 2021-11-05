@@ -184,6 +184,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
 
 export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // Early bailout if there's no pending work left.
+  // 如果没有pending 剩余了，就直接返回
   const pendingLanes = root.pendingLanes;
   if (pendingLanes === NoLanes) {
     return NoLanes;
@@ -191,8 +192,8 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
 
   let nextLanes = NoLanes;
 
-  const suspendedLanes = root.suspendedLanes;
-  const pingedLanes = root.pingedLanes;
+  const suspendedLanes = root.suspendedLanes; // 暂停的lanes
+  const pingedLanes = root.pingedLanes; // 紧急的lanes
 
   // Do not work on any idle work until all the non-idle work has finished,
   // even if the work is suspended.
@@ -395,12 +396,14 @@ export function markStarvedLanesAsExpired(
   const pendingLanes = root.pendingLanes;
   const suspendedLanes = root.suspendedLanes;
   const pingedLanes = root.pingedLanes;
-  const expirationTimes = root.expirationTimes;
+  const expirationTimes = root.expirationTimes; // root的过期时间, expirationTimes[i]表示第i个lane的过期时间
 
   // Iterate through the pending lanes and check if we've reached their
   // expiration time. If so, we'll assume the update is being starved and mark
   // it as expired to force it to finish.
-  let lanes = pendingLanes;
+  // 遍历 pendingLanes, 检查我们是否已到达它们的 到期时间（expirationTimes）
+  // 如果已到达，我们将标记其已过期，以便将它强制结束。
+  let lanes = pendingLanes; 
   while (lanes > 0) {
     const index = pickArbitraryLaneIndex(lanes);
     const lane = 1 << index;
@@ -580,7 +583,7 @@ export function markRootUpdated(
   // We don't do this if the incoming update is idle, because we never process
   // idle updates until after all the regular updates have finished; there's no
   // way it could unblock a transition.
-  if (updateLane !== IdleLane) {
+  if (updateLane !== IdleLane) { 
     root.suspendedLanes = NoLanes;
     root.pingedLanes = NoLanes;
   }
@@ -589,6 +592,7 @@ export function markRootUpdated(
   const index = laneToIndex(updateLane);
   // We can always overwrite an existing timestamp because we prefer the most
   // recent event, and we assume time is monotonically increasing.
+  // 我们总是可以覆盖现有的时间戳，因为我们更喜欢最近的事件，并且我们假设时间是单调增加的。
   eventTimes[index] = eventTime;
 }
 

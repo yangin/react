@@ -245,7 +245,7 @@ export function createContainer(
   isStrictMode: boolean, // render首次调用时为false
   concurrentUpdatesByDefaultOverride: null | boolean, // render首次调用时为false
 ): OpaqueRoot {
-  return createFiberRoot(
+  return  (
     containerInfo,
     tag,
     hydrate,
@@ -256,7 +256,7 @@ export function createContainer(
 }
 
 export function updateContainer(
-  element: ReactNodeList,
+  element: ReactNodeList, 
   container: OpaqueRoot,
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
@@ -266,7 +266,7 @@ export function updateContainer(
   }
   const current = container.current;
   const eventTime = requestEventTime();
-  const lane = requestUpdateLane(current);
+  const lane = requestUpdateLane(current);  // mount阶段时，lane =SyncLane
 
   if (enableSchedulingProfiler) {
     markRenderScheduled(lane);
@@ -315,7 +315,7 @@ export function updateContainer(
     update.callback = callback;
   }
 
-  enqueueUpdate(current, update, lane);
+  enqueueUpdate(current, update, lane); 
   const root = scheduleUpdateOnFiber(current, lane, eventTime);
   if (root !== null) {
     entangleTransitions(root, current, lane);

@@ -14,6 +14,9 @@
 // mutated and processed asynchronously before it is committed — a form of
 // double buffering. If a work-in-progress render is discarded before finishing,
 // we create a new work-in-progress by cloning the current queue.
+
+// 像Fiber一样，update queue也总是成对出现，一个是current queue，表示屏幕可见的状态，一个是work-in-progress queue，可以在提交前修改并处理异步的工作，
+// 这是一种双缓冲的方式。如果在完成前丢弃了一个work-in-progress render，我们会创建一个新的work-in-progress，通过克隆当前queue。
 //
 // Both queues share a persistent, singly-linked list structure. To schedule an
 // update, we append it to the end of both queues. Each queue maintains a
@@ -22,6 +25,12 @@
 // the current queue, since we always work on that one. The current queue's
 // pointer is only updated during the commit phase, when we swap in the
 // work-in-progress.
+
+// 两个queue共享一个持久的单链表结构。要调度一个update，我们将它添加到两个queue的末尾。
+// 每一个queue都会维护一个指向没有被处理的持久列表中的第一个update的指针。
+// work-in-progress queue指针总是大于或等于当前queue，因为我们总是在工作中。
+// 当前queue的指针只在提交阶段更新，在我们交换work-in-progress时。
+
 //
 // For example:
 //
@@ -41,12 +50,19 @@
 // work-in-progress. (And because the work-in-progress queue becomes the
 // current queue once it commits, there's no danger of applying the same
 // update twice.)
-//
+
+// 我们在2个queue中都添加update，是因为不这样的话我们可能会丢弃没有被处理的update。
+// 例如，我们只向work-in-progress queue中添加update，当work-in-progress通过clone current后重新render时，会丢失一些update，
+// 如果我们只向current queue中添加update，那么每当一个正在进行的queue提交并与current queue交换时，update就会丢失。
+// 但是，我们通过添加到两个queue中，我们保证update将成为下一个正在进行的工作的一部分。(并且因为正在进行中的队列一旦提交就成为当前队列，所以不会有两次应用相同更新的危险。)
+
 // Prioritization
+// 优先级
 // --------------
 //
 // Updates are not sorted by priority, but by insertion; new updates are always
 // appended to the end of the list.
+// update 不是按照 priority 排序的，而是按照插入顺序。新的update总是被添加到列表的末尾。
 //
 // The priority is still important, though. When processing the update queue
 // during the render phase, only the updates with sufficient priority are
@@ -57,6 +73,11 @@
 // updates are sometimes processed twice, at two separate priorities. We also
 // keep track of a base state, that represents the state before the first
 // update in the queue is applied.
+
+// priority 任然是重要的，当在render阶段处理update queue时，只有具有足够优先级（priority）的update才会被包含在结果中。
+// 如果我们因为没有足够的优先级priority而跳过一个update，它将保留在队列中，以便在下一个低优先级render中处理。
+// 当然，之后的所有update也将保留在队列中，不管它们的优先级priority。
+
 //
 // For example:
 //
@@ -83,6 +104,11 @@
 // updates when preceding updates are skipped, the final result is deterministic
 // regardless of priority. Intermediate state may vary according to system
 // resources, but the final state is always the same.
+
+// 因为我们是按照插入顺序来处理update的，并且在跳过前面的update时，会重新排序高优先级update，最终结果是确定的，不管优先级priority。
+// 中间状态会因系统资源而异，但最终的结果总是相同的。
+
+//
 
 import type {Fiber, FiberRoot} from './ReactInternalTypes';
 import type {Lanes, Lane} from './ReactFiberLane.old';
@@ -182,6 +208,7 @@ export function cloneUpdateQueue<State>(
   // Clone the update queue from current. Unless it's already a clone.
   const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
   const currentQueue: UpdateQueue<State> = (current.updateQueue: any);
+  // queue === currentQueue 只是表示这2个对象的指针相同，其内存存储的baseState、firstBaseUpdate 等对象的具体内容并没有相等，指过来，所以此处需要clone过来
   if (queue === currentQueue) {
     const clone: UpdateQueue<State> = {
       baseState: currentQueue.baseState,
@@ -452,6 +479,7 @@ function getStateFromUpdate<State>(
   return prevState;
 }
 
+// 干什么用的 ？？？
 export function processUpdateQueue<State>(
   workInProgress: Fiber,
   props: any,

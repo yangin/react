@@ -21,9 +21,13 @@ import {
 
 export opaque type EventPriority = Lane;
 
+// 离散的事件优先级
 export const DiscreteEventPriority: EventPriority = SyncLane;
+// 连续的事件优先级
 export const ContinuousEventPriority: EventPriority = InputContinuousLane;
+// 默认的事件优先级
 export const DefaultEventPriority: EventPriority = DefaultLane;
+// 空闲的事件优先级
 export const IdleEventPriority: EventPriority = IdleLane;
 
 let currentUpdatePriority: EventPriority = NoLane;

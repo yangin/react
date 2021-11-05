@@ -59,6 +59,7 @@ export type Dependencies = {
   ...
 };
 
+
 // A Fiber is work on a Component that needs to be done or was done. There can
 // be more than one per component.
 export type Fiber = {|
@@ -98,11 +99,7 @@ export type Fiber = {|
   // This is effectively the parent, but there can be multiple parents (two)
   // so this is only the parent of the thing we're currently processing.
   // It is conceptually the same as the return address of a stack frame.
-  return: Fiber | null,
-
-  // Singly Linked List Tree Structure.
-  child: Fiber | null,
-  sibling: Fiber | null,
+  return::: Fiber | null,
   index: number,
 
   // The ref last used to attach this node.

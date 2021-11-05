@@ -144,7 +144,7 @@ function FiberNode(
   this.mode = mode; 
 
   // 保存本次更新会造成的DOM操作
-  this.flags = NoFlags;
+  this.flags = NoFlags; // 存放这个Fiber在commit阶段要执行的更新操作，为Update, Placement, Deletion, Ref 等
   this.subtreeFlags = NoFlags;
   this.deletions = null;
 
@@ -153,7 +153,8 @@ function FiberNode(
   this.childLanes = NoLanes;
 
   // 指向该fiber在另一次更新时对应的fiber
-  this.alternate = null;
+  // 在上一次更新时的Fiber节点，在上一次更新后，会将更新后的Fiber存入alternate 中，留作备用，待下一次update时，调用workInProgress.alternate 即可拿到上次的Fiber更新后的结果
+  this.alternate = null; // 备用
 
   if (enableProfilerTimer) {
     // Note: The following is done to avoid a v8 performance cliff.
@@ -218,6 +219,7 @@ const createFiber = function(
   return new FiberNode(tag, pendingProps, key, mode);
 };
 
+// 检查function component 是否有 isReactComponent，如果存在，则判定其为 ClassComponent
 function shouldConstruct(Component: Function) {
   const prototype = Component.prototype;
   return !!(prototype && prototype.isReactComponent);
@@ -247,6 +249,7 @@ export function resolveLazyComponentTag(Component: Function): WorkTag {
 }
 
 // This is used to create an alternate fiber to do work on.
+// 这被用来创建一个备用的Fiber在内存中
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   let workInProgress = current.alternate;
   if (workInProgress === null) {
@@ -466,6 +469,7 @@ export function createHostRootFiber(
   return createFiber(HostRoot, null, null, mode);
 }
 
+// 通过type与Props来创建Fiber
 export function createFiberFromTypeAndProps(
   type: any, // React$ElementType
   key: null | string,
@@ -474,7 +478,9 @@ export function createFiberFromTypeAndProps(
   mode: TypeOfMode,
   lanes: Lanes,
 ): Fiber {
-  let fiberTag = IndeterminateComponent;
+  // 默认为 IndeterminateComponent, 值为2
+  // 在不确定是function component 还是class component之前,设置fiberTag为此值
+  let fiberTag = IndeterminateComponent;  
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
   let resolvedType = type;
   if (typeof type === 'function') {
@@ -591,6 +597,7 @@ export function createFiberFromTypeAndProps(
   return fiber;
 }
 
+// 创建离屏的HostContainerFiber
 export function createOffscreenHostContainerFiber(
   props: Props,
   fiberMode: TypeOfMode,
@@ -610,6 +617,7 @@ export function createOffscreenHostContainerFiber(
   }
 }
 
+// 从Element 创建Fiber
 export function createFiberFromElement(
   element: ReactElement,
   mode: TypeOfMode,
