@@ -305,6 +305,10 @@ const classComponentUpdater = {
   },
 };
 
+// 检查是否应该执行Update
+// 优先检查shouldComponentUpdate， 如果存在，则根据shouldComponentUpdate的返回值决定是否执行Update
+// 如果不存在shouldComponentUpdate，判断isPureReactComponent，如果是，则进行浅比较shallowEqual props与 state,并返回比较结果，如果不同了，则返回true
+// 当不存在 shouldComponentUpdate 与 isPureReactComponent 时，默认返回 true
 function checkShouldComponentUpdate(
   workInProgress,
   ctor,
@@ -1090,6 +1094,8 @@ function resumeMountClassInstance(
 }
 
 // Invokes the update life-cycles and returns false if it shouldn't rerender.
+// 在此处检查shouldComponentUpdate
+// 在此处执行了 componentWillReceiveProps 和 componentWillUpdate
 function updateClassInstance(
   current: Fiber,
   workInProgress: Fiber,
@@ -1107,7 +1113,7 @@ function updateClassInstance(
       ? unresolvedOldProps
       : resolveDefaultProps(workInProgress.type, unresolvedOldProps);
   instance.props = oldProps;
-  const unresolvedNewProps = workInProgress.pendingProps;
+  const unresolvedNewProps = workInProgress.pendingProps; // 在此处获取了新的props
 
   const oldContext = instance.context;
   const contextType = ctor.contextType;
@@ -1152,6 +1158,7 @@ function updateClassInstance(
 
   const oldState = workInProgress.memoizedState;
   let newState = (instance.state = oldState);
+  // 处理UpdateQueue
   processUpdateQueue(workInProgress, newProps, instance, renderLanes);
   newState = workInProgress.memoizedState;
 
@@ -1198,6 +1205,7 @@ function updateClassInstance(
     newState = workInProgress.memoizedState;
   }
 
+  // 检查是否有强制更新 ForceUpdate, 如果没有，则继续检查 shouldComponentUpdate
   const shouldUpdate =
     checkHasForceUpdateAfterProcessing() ||
     checkShouldComponentUpdate(
@@ -1219,6 +1227,7 @@ function updateClassInstance(
       checkIfContextChanged(current.dependencies));
 
   if (shouldUpdate) {
+    // 当shouldUpdate 为 true 时，直接为 workInProgress 打上
     // In order to support react-lifecycles-compat polyfilled components,
     // Unsafe lifecycles should not be invoked for components using the new APIs.
     if (
@@ -1242,6 +1251,11 @@ function updateClassInstance(
   } else {
     // If an update was already in progress, we should schedule an Update
     // effect even though we're bailing out, so that cWU/cDU are called.
+
+    // 当shouldComponentUpdate返回false时
+    // 如果存在componentDidUpdate，且 state或 props发生了变化，则执行componentDidUpdate
+    // 如果存在getSnapshotBeforeUpdate，且 state或 props发生了变化，则执行getSnapshotBeforeUpdate
+    // 此处都是打给fiber.flags 打标记的方式，具体执行在commit阶段
     if (typeof instance.componentDidUpdate === 'function') {
       if (
         unresolvedOldProps !== current.memoizedProps ||

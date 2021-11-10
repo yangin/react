@@ -630,6 +630,7 @@ export function createFiberFromElement(
   const type = element.type;
   const key = element.key;
   const pendingProps = element.props;
+  // 根据element的type和props创建Fiber
   const fiber = createFiberFromTypeAndProps(
     type,
     key,

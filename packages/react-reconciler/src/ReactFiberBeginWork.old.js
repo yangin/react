@@ -585,6 +585,8 @@ function updateSimpleMemoComponent(
         // contains hooks.
         // TODO: Move the reset at in beginWork out of the common path so that
         // this is no longer necessary.
+
+        // 通过浅比较执行复用逻辑
         workInProgress.lanes = current.lanes;
         return bailoutOnAlreadyFinishedWork(
           current,
@@ -598,6 +600,8 @@ function updateSimpleMemoComponent(
       }
     }
   }
+
+  // 如果shallowEqual 的 结果为false , 则执行更新
   return updateFunctionComponent(
     current,
     workInProgress,
@@ -1030,6 +1034,34 @@ function updateFunctionComponent(
 }
 
 // 更新 ClassComponent
+// 在此阶段检查 shouldComponentUpdate 函数
+function updateClassComponent(
+  current,
+  workInProgress,
+  Component,
+  nextProps,
+  renderLanes,
+) {
+  if (__DEV__) {
+    if (isContextProvider(Component)) {
+      console.error(
+        'A context consumer was rendered with a read-only context.',
+      );
+    }
+
+    if (workInProgress.type !== workInProgress.elementType) {
+      // Lazy component props can't be validated in createElement
+      // because they're only guaranteed to be resolved here.
+      const innerPropTypes = Component.propTypes;
+      if (innerPropTypes) {
+        checkPropTypes(
+          innerPropTypes,
+          nextProps, // Resolved props
+          'prop',
+          getComponentName(Component),
+        );
+      }
+    }
 function updateClassComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1116,6 +1148,7 @@ function updateClassComponent(
     mountClassInstance(workInProgress, Component, nextProps, renderLanes);
     shouldUpdate = true;
   } else if (current === null) {
+    // 当为 mount 阶段时，执行 resumeMountClassInstance
     // In a resume, we'll already have an instance we can reuse.
     shouldUpdate = resumeMountClassInstance(
       workInProgress,
@@ -1124,6 +1157,7 @@ function updateClassComponent(
       renderLanes,
     );
   } else {
+    // 当为 update 阶段时，执行 updateClassInstance
     shouldUpdate = updateClassInstance(
       current,
       workInProgress,
@@ -1169,6 +1203,7 @@ function finishClassComponent(
 
   const didCaptureError = (workInProgress.flags & DidCapture) !== NoFlags;
 
+  // 当 shouldUpdate 为 false 时， 且 didCaptureError不存在时， 通过 bailoutOnAlreadyFinishedWork 来复用组件
   if (!shouldUpdate && !didCaptureError) {
     // Context providers should defer to sCU for rendering
     if (hasContext) {
@@ -3290,6 +3325,7 @@ export function checkIfWorkInProgressReceivedUpdate() {
   return didReceiveUpdate;
 }
 
+// 复用，不渲染当前页面
 function bailoutOnAlreadyFinishedWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -3327,6 +3363,7 @@ function bailoutOnAlreadyFinishedWork(
 
   // This fiber doesn't have work, but its subtree does. Clone the child
   // fibers and continue.
+  // 这个 fiber 没有工作，但是他的子树工作了。clone了子 fiber 并继续
   cloneChildFibers(current, workInProgress);
   return workInProgress.child;
 }

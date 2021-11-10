@@ -51,7 +51,7 @@ type Fiber = {
   // TODO: 右侧兄弟？
   sibling: Fiber | null,
 
-  // TODO：
+  // 表示的是当前节点在父节点中的位置，属于第几个子节点。当在做多节点的Diff算法时会用来进行比较
   index: number,
 
   // ref属性
@@ -387,5 +387,23 @@ commit阶段相关文件夹
   2. 通过prepareUpdate 来更新 DOM节点上的属性，如onClick、onChange等回调函数的注册、处理style prop、处理DANGEROUSLY_SET_INNER_HTML prop， 处理children prop
   3. 被处理完的props会被赋值给workInProgress.updateQueue，并最终会在commit阶段被渲染在页面上
   4. 每个执行完completeWork且存在effectTag的Fiber节点会被保存在一条被称为effectList的单向链表中 ???
+
+- [4.12]() diff算法
+  从 reconcileChildFibers 处开始
+  - 单节点Diff
+
+    React通过先判断key是否相同，如果key相同则判断type是否相同，只有都相同时一个DOM节点才能复用。
+
+    注意点：
+
+    当child !== null且key相同且type不同时执行deleteRemainingChildren将child及其兄弟fiber都标记删除。
+
+    当child !== null且key不同时仅将child标记删除。
+
+  为什么只需要比较key与type 2 个属性呢？
+
+  **因为props及children的改变（children实际也为props）,会被作为参数传入到createFiber中去。即不需要生成一个新的对象，只需要在原来的旧的对象上进行重新赋值即可，节省的是创建object的性能开销。**
+  
+  - 多节点Diff
 
 **[⬆ 回到顶部](#目录)**

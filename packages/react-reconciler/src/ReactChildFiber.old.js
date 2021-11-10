@@ -278,6 +278,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
   }
 
+  // 删除该父级下的所有children
   function deleteRemainingChildren(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -327,6 +328,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return clone;
   }
 
+  // 为fiber.flags 打上 Placement标记, 并打上index标记
   function placeChild(
     newFiber: Fiber,
     lastPlacedIndex: number,
@@ -340,7 +342,9 @@ function ChildReconciler(shouldTrackSideEffects) {
     const current = newFiber.alternate;
     if (current !== null) {
       const oldIndex = current.index;
-      if (oldIndex < lastPlacedIndex) {
+      // 新的 newFiber 只能右移 ？
+      // 对于移动的fiber，将其标记为 Placement
+      if (oldIndex < lastPlacedIndex) {      
         // This is a move.
         newFiber.flags |= Placement;
         return lastPlacedIndex;
@@ -554,6 +558,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return null;
   }
 
+  // 返回的是一个diff后的fiber, 此处做了一个单节点的Diff
   function updateSlot(
     returnFiber: Fiber,
     oldFiber: Fiber | null,
@@ -734,6 +739,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return knownKeys;
   }
 
+  // 多节点Diff
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -772,22 +778,33 @@ function ChildReconciler(shouldTrackSideEffects) {
     let previousNewFiber: Fiber | null = null;
 
     let oldFiber = currentFirstChild;
-    let lastPlacedIndex = 0;
+    let lastPlacedIndex = 0; // 始终指向最后一个可复用节点的index
     let newIdx = 0;
     let nextOldFiber = null;
+
+    // 先基于新的元素进行第一轮遍历
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
+      // fiber.index 表示的是当前节点在父节点中的位置，属于第几个子节点。
+      // 因为是从头开始遍历的，所以此处是 > 而不是 !==, 因为newIdx 是从0起步的，oldFiber.index 只能 >= 0
+      // 随后的每一个 newIdx++, 理论上都会带来 ldFiber.index ++，通过 nextOldFiber = oldFiber.sibling;
+
+      // 如果index相等，则进入下一轮比较，否则，oldFiber将作为 nextOldFiber，继续与下一个元素做比较
       if (oldFiber.index > newIdx) {
         nextOldFiber = oldFiber;
         oldFiber = null;
       } else {
         nextOldFiber = oldFiber.sibling;
       }
+      // 此处通单节点的diff算法来返回一个新的newFiber，基于newChildren[newIdx]
+      // 这里，只有当可以复用时，才会返回节点，否则只会返回null, 即对这个新的newFiber先不做处理
       const newFiber = updateSlot(
         returnFiber,
         oldFiber,
         newChildren[newIdx],
         lanes,
       );
+
+      // 当newFiber  === null 情况下，直接跳出第一轮循环
       if (newFiber === null) {
         // TODO: This breaks on empty slots like null children. That's
         // unfortunate because it triggers the slow path all the time. We need
@@ -798,6 +815,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         }
         break;
       }
+      
       if (shouldTrackSideEffects) {
         if (oldFiber && newFiber.alternate === null) {
           // We matched the slot, but we didn't reuse the existing fiber, so we
@@ -805,7 +823,11 @@ function ChildReconciler(shouldTrackSideEffects) {
           deleteChild(returnFiber, oldFiber);
         }
       }
+      // 为newFiber 打上 .index 与 .flags 两个标记
       lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+
+      // 当存在可复用的节点时，将其赋值给 resultingFirstChild，来构建一个子节点关系
+      // 通过 previousNewFiber.sibling = newFiber 来连接可复用的节点
       if (previousNewFiber === null) {
         // TODO: Move out of the loop. This only happens for the first run.
         resultingFirstChild = newFiber;
@@ -820,6 +842,10 @@ function ChildReconciler(shouldTrackSideEffects) {
       oldFiber = nextOldFiber;
     }
 
+    // 根据情况不同，进行第二轮遍历
+
+    // 当不满足以下3中情况时，删除父级原来的所有子节点
+    // 即 newChildren 为一个空数组
     if (newIdx === newChildren.length) {
       // We've reached the end of the new children. We can delete the rest.
       deleteRemainingChildren(returnFiber, oldFiber);
@@ -829,6 +855,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
+      // newChildren没遍历完，oldFiber遍历完
+      // 已有的DOM节点都复用了，这时还有新加入的节点，意味着本次更新有新节点插入，我们只需要遍历剩下的newChildren为生成的workInProgress fiber依次标记Placement。
       for (; newIdx < newChildren.length; newIdx++) {
         const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
         if (newFiber === null) {
@@ -847,9 +875,12 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     // Add all children to a key map for quick lookups.
+    // 对于节点位置发生了改变的情况，我们需要更新keyMap，以便于后续的比较
+    // 将所有还未处理的oldFiber存入以key为key，oldFiber为value的Map中。
     const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
 
     // Keep scanning and use the map to restore deleted items as moves.
+    // 接下来遍历剩余的newChildren，通过newChildren[i].key就能在existingChildren中找到key相同的oldFiber。
     for (; newIdx < newChildren.length; newIdx++) {
       const newFiber = updateFromMap(
         existingChildren,
@@ -870,6 +901,7 @@ function ChildReconciler(shouldTrackSideEffects) {
             );
           }
         }
+        // 通过placeChild来处理移动位置的fiber, 其内部通过比较oldIndex来确定是否需要移动
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
         if (previousNewFiber === null) {
           resultingFirstChild = newFiber;
@@ -1111,12 +1143,16 @@ function ChildReconciler(shouldTrackSideEffects) {
   ): Fiber {
     const key = element.key;
     let child = currentFirstChild;
+    // 当对应的之前的节点（currentFirstChild）存在时
     while (child !== null) {
       // TODO: If key === null and child.key === null, then this only applies to
       // the first item in the list.
+      // 当当前要更新的element与原current都是Fragment，且key相同，则先移除父级的所有子集，再通过clone的方式来createFiber。指向父级
+      // 避开了diff操作
       if (child.key === key) {
-        const elementType = element.type;
+        const elementType = element.type; // element.type 为元素类型，即input、div、button等
         if (elementType === REACT_FRAGMENT_TYPE) {
+          // Fragment与下面正常的元素相比，在使用useFiber时，传入的是element.props.children， 而元素时element.props。且少一个coerceRef
           if (child.tag === Fragment) {
             deleteRemainingChildren(returnFiber, child.sibling);
             const existing = useFiber(child, element.props.children);
@@ -1128,6 +1164,8 @@ function ChildReconciler(shouldTrackSideEffects) {
             return existing;
           }
         } else {
+          // 当key相同，且elementType也相同时
+          // 先删除父级下的所有子集，再通过clone的方式来createFiber。指向父级
           if (
             child.elementType === elementType ||
             // Keep this check inline so it only runs on the false path:
@@ -1156,14 +1194,18 @@ function ChildReconciler(shouldTrackSideEffects) {
           }
         }
         // Didn't match.
+        // 代码执行到这里代表：key相同但是type不同
+        // 将该fiber及其兄弟fiber标记为删除
         deleteRemainingChildren(returnFiber, child);
         break;
       } else {
+        // key不同，将该fiber标记为删除
         deleteChild(returnFiber, child);
       }
       child = child.sibling;
     }
 
+    // 当Fragment元素需要更新时，直接将children赋给新的Fiber, 不对Fragment的子集进行diff处理
     if (element.type === REACT_FRAGMENT_TYPE) {
       const created = createFiberFromFragment(
         element.props.children,
@@ -1220,6 +1262,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
+  // 这个方法将标记children的side-effect，这些side-effect将会被添加到side-effect list中，
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1234,6 +1277,9 @@ function ChildReconciler(shouldTrackSideEffects) {
     // Handle top level unkeyed fragments as if they were arrays.
     // This leads to an ambiguity between <>{[...]}</> and <>...</>.
     // We treat the ambiguous cases above the same.
+
+    // 这个方法不是递归的，如果top level item是数组，我们认为它是一个children，而不是一个fragment。
+    // fragment的作用在这里，当节点是一个fragment节点时，直接取其children做比较, 前提是fragment没有被key标记
     const isUnkeyedTopLevelFragment =
       typeof newChild === 'object' &&
       newChild !== null &&
@@ -1278,6 +1324,7 @@ function ChildReconciler(shouldTrackSideEffects) {
           }
       }
 
+      // 多节点Diff
       if (isArray(newChild)) {
         return reconcileChildrenArray(
           returnFiber,
