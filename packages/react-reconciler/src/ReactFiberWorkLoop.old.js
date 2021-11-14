@@ -489,6 +489,7 @@ export function scheduleUpdateOnFiber(
   checkForNestedUpdates();
   warnAboutRenderPhaseUpdatesInDEV(fiber);
 
+  // 从触发状态更新的fiber找到rootFiber
   const root = markUpdateLaneFromFiberToRoot(fiber, lane);
   if (root === null) {
     return null;
@@ -553,6 +554,7 @@ export function scheduleUpdateOnFiber(
   }
 
   // 在这里将performSyncWorkOnRoot添加到callback中，然后在 flushSyncCallbacks中调用
+  // 在此处调度performSyncWorkOnRoot，即开始了一个 render 与commit流程。
   ensureRootIsScheduled(root, eventTime);
   if (
     lane === SyncLane &&
@@ -580,6 +582,7 @@ export function scheduleUpdateOnFiber(
 
 // 这被拆分为一个单独的function, 这使得我们可以标记一个 fiber 为 pending 状态,而无需将其视为源自事件的典型更新；
 // 标记update通道 从 Fiber 到 Root
+// 通过sourceFiber.return 一直向上，找到rootFiber并返回
 function markUpdateLaneFromFiberToRoot(
   sourceFiber: Fiber,
   lane: Lane,

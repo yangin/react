@@ -1321,6 +1321,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
   const prevState = workInProgress.memoizedState; // 待更新之前的状态
   const prevChildren = prevState.element;
   cloneUpdateQueue(current, workInProgress);
+  // 执行UpdateQueue，并计算出新的state
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
   const nextState = workInProgress.memoizedState;
 

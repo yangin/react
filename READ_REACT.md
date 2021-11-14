@@ -407,3 +407,168 @@ commit阶段相关文件夹
   - 多节点Diff
 
 **[⬆ 回到顶部](#目录)**
+
+## Update的触发流程
+
+触发update的方法主要有
+
+- ReactDOM.render
+- this.setState
+- this.forceUpdate
+- useState
+- useReducer
+
+触发步骤
+
+ReactDOM.render
+
+updateContainer 中 存在
+
+```javascript
+export function updateContainer(
+  element: ReactNodeList,
+  container: OpaqueRoot,
+  parentComponent: ?React$Component<any, any>,
+  callback: ?Function,
+): Lane {
+  // ...省略与逻辑不相关代码
+
+  // 创建update
+  const update = createUpdate(eventTime, lane, suspenseConfig);
+  
+  // update.payload为需要挂载在根节点的组件
+  update.payload = {element};
+
+  // callback为ReactDOM.render的第三个参数 —— 回调函数
+  callback = callback === undefined ? null : callback;
+  if (callback !== null) {
+    update.callback = callback;
+  }
+
+  // 将生成的update加入updateQueue
+  enqueueUpdate(current, update);
+  // 调度更新
+  scheduleUpdateOnFiber(current, lane, eventTime);
+
+  // ...省略与逻辑不相关代码
+}
+```
+
+this.setState 与 this.forceUpdate
+
+```javascript
+Component.prototype.setState = function(partialState, callback) {
+  // ...
+
+  // 通过enqueueSetState来触发update流程
+  this.updater.enqueueSetState(this, partialState, callback, 'setState');
+};
+
+Component.prototype.forceUpdate = function(callback) {
+  // 将callback放入updater队列， 标记为forceUpdate
+  // 通过enqueueForceUpdate来触发update流程
+  this.updater.enqueueForceUpdate(this, callback, 'forceUpdate');
+};
+```
+
+```javascript
+const classComponentUpdater = {
+  isMounted,
+  enqueueSetState(inst, payload, callback) {
+    // ...
+
+    // 创建一个update
+    const update = createUpdate(eventTime, lane);
+    update.payload = payload;
+    if (callback !== undefined && callback !== null) {
+      update.callback = callback;
+    }
+
+    // 将update放入updateQueue中
+    enqueueUpdate(fiber, update, lane);
+    // schedule updateQueue, 执行updateQueue内容
+    const root = scheduleUpdateOnFiber(fiber, lane, eventTime);
+    if (root !== null) {
+      entangleTransitions(root, fiber, lane);
+    }
+
+    // ...
+  },
+  enqueueReplaceState(inst, payload, callback) {
+    // ...
+  },
+  enqueueForceUpdate(inst, callback) {
+    // ...
+
+    const update = createUpdate(eventTime, lane);
+    update.tag = ForceUpdate;
+
+    if (callback !== undefined && callback !== null) {
+      update.callback = callback;
+    }
+
+    enqueueUpdate(fiber, update, lane);
+    const root = scheduleUpdateOnFiber(fiber, lane, eventTime);
+
+    // ...
+  },
+};
+```
+
+scheduleUpdateOnFiber 触发 渲染流程（即render与commit）
+
+```javascript
+export function scheduleUpdateOnFiber(
+  fiber: Fiber,
+  lane: Lane,
+  eventTime: number,
+): FiberRoot | null {
+  // ...
+
+  ensureRootIsScheduled(root, eventTime);
+  
+  // ...
+}
+```
+
+render阶段开始于performSyncWorkOnRoot或performConcurrentWorkOnRoot方法的调用。这取决于本次更新是同步更新还是异步更新。
+
+commit阶段开始于commitRoot方法的调用。其中rootFiber会作为传参。
+
+从fiber到root
+
+我们知道，render阶段是从rootFiber开始向下遍历。那么如何从触发状态更新的fiber得到rootFiber呢？
+
+答案是：调用markUpdateLaneFromFiberToRoot方法。
+
+在scheduleUpdateOnFiber 中调用 ensureRootIsScheduled
+
+在 ensureRootIsScheduled 中触发 performSyncWorkOnRoot 与 performConcurrentWorkOnRoot
+
+```javascript
+unction ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  // ...
+  
+  let newCallbackNode;
+  if (newCallbackPriority === SyncLane) {
+    if (root.tag === LegacyRoot) {
+      // ...
+
+      // 往SyncQueue中添加一个callback(performSyncWorkOnRoot)
+      scheduleLegacySyncCallback(performSyncWorkOnRoot.bind(null, root));
+    } else {
+      scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root));
+    }
+  } else {
+
+    // ...
+    newCallbackNode = scheduleCallback(
+      schedulerPriorityLevel,
+      performConcurrentWorkOnRoot.bind(null, root),
+    );
+  }
+
+  root.callbackPriority = newCallbackPriority;
+  root.callbackNode = newCallbackNode;
+}
+```

@@ -396,6 +396,7 @@ export function enqueueCapturedUpdate<State>(
   queue.lastBaseUpdate = capturedUpdate;
 }
 
+// 根据传入的UpdateQueue计算获取新的state
 function getStateFromUpdate<State>(
   workInProgress: Fiber,
   queue: UpdateQueue<State>,
@@ -440,11 +441,13 @@ function getStateFromUpdate<State>(
     case UpdateState: {
       const payload = update.payload;
       let partialState;
+      // 当this.state的第一个参数为function时
       if (typeof payload === 'function') {
         // Updater function
         if (__DEV__) {
           enterDisallowedContextReadInDEV();
         }
+        // 根据Update内容计算新的state
         partialState = payload.call(instance, prevState, nextProps);
         if (__DEV__) {
           if (
@@ -462,6 +465,7 @@ function getStateFromUpdate<State>(
         }
       } else {
         // Partial state object
+        // 当this.state为object时，直接将其值返回给partialState，作为最新的state
         partialState = payload;
       }
       if (partialState === null || partialState === undefined) {
@@ -469,6 +473,7 @@ function getStateFromUpdate<State>(
         return prevState;
       }
       // Merge the partial state and the previous state.
+      // 通过Object.assign 让新的partialState，来覆盖prevState，以产生新的state，且通过第一个参数{}来保证state对象没有原型链属性
       return Object.assign({}, prevState, partialState);
     }
     case ForceUpdate: {
@@ -479,7 +484,7 @@ function getStateFromUpdate<State>(
   return prevState;
 }
 
-// 干什么用的 ？？？
+// 执行Fiber中的updateQueue，计算得到新的state, 存入memoizedState中
 export function processUpdateQueue<State>(
   workInProgress: Fiber,
   props: any,
@@ -499,7 +504,7 @@ export function processUpdateQueue<State>(
   let lastBaseUpdate = queue.lastBaseUpdate;
 
   // Check if there are pending updates. If so, transfer them to the base queue.
-  let pendingQueue = queue.shared.pending;
+  let pendingQueue = queue.shared.pending;  // 当前要执行的Update
   if (pendingQueue !== null) {
     queue.shared.pending = null;
 
@@ -550,6 +555,8 @@ export function processUpdateQueue<State>(
     let newLastBaseUpdate = null;
 
     let update = firstBaseUpdate;
+
+    // 循环遍历updateQueue, 并产生新的state
     do {
       const updateLane = update.lane;
       const updateEventTime = update.eventTime;
@@ -596,6 +603,7 @@ export function processUpdateQueue<State>(
         }
 
         // Process this update.
+        // 执行这个 Update, 并返回执行Update后的结果
         newState = getStateFromUpdate(
           workInProgress,
           queue,

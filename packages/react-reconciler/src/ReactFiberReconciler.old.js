@@ -255,6 +255,7 @@ export function createContainer(
   );
 }
 
+ // ReactDOM.render通过在updateContainer 中创建一个Update，放入updateQueue中，并调度执行
 export function updateContainer(
   element: ReactNodeList, 
   container: OpaqueRoot,
@@ -296,6 +297,7 @@ export function updateContainer(
     }
   }
 
+  //步骤1：创建一个update，且update的payload={element}
   const update = createUpdate(eventTime, lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
@@ -315,7 +317,9 @@ export function updateContainer(
     update.callback = callback;
   }
 
+  // 步骤2： 将穿件的update放入updateQueue中
   enqueueUpdate(current, update, lane); 
+  // 步骤3： 调度并执行updateQueue
   const root = scheduleUpdateOnFiber(current, lane, eventTime);
   if (root !== null) {
     entangleTransitions(root, current, lane);

@@ -185,6 +185,7 @@ function legacyRenderSubtreeIntoContainer(
     // Initial mount should not be batched.
     // 刷新执行的优先级
     flushSync(() => {
+      // 在updateContainer 中创建一个Update，放入updateQueue中，并调度执行
       updateContainer(children, fiberRoot, parentComponent, callback); // 返回的是一个 Lane， render时，值为NoLane
     });
   } else {

@@ -74,6 +74,7 @@ Component.prototype.setState = function(partialState, callback) {
   }
 
   // 将state update需求放入updater队列， 标记为setState
+  // enqueueSetState内部执行了一个update的调度流程，包括创建update,放入 updateQueue中，最后调度执行updateQueue，来触发一轮render、commit流程
   this.updater.enqueueSetState(this, partialState, callback, 'setState');
 };
 
