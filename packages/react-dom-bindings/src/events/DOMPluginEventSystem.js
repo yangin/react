@@ -392,8 +392,10 @@ export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
       // doesn't bubble and needs to be on the document.
       if (domEventName !== 'selectionchange') {
         if (!nonDelegatedEvents.has(domEventName)) {
+          // 冒泡阶段
           listenToNativeEvent(domEventName, false, rootContainerElement);
         }
+        // 捕获阶段
         listenToNativeEvent(domEventName, true, rootContainerElement);
       }
     });

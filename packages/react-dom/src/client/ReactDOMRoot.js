@@ -142,6 +142,7 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = functio
       }
     }
   }
+  // 执行render方法，[将children添加到root的dom节点上]这一需求添加到enqueueUpdate任务队列中执行
   updateContainer(children, root, null, null);
 };
 
@@ -233,6 +234,7 @@ export function createRoot(
     }
   }
 
+  // 创建一个 FiberRoot
   const root = createContainer(
     container,
     ConcurrentRoot,
@@ -243,6 +245,7 @@ export function createRoot(
     onRecoverableError,
     transitionCallbacks,
   );
+  // 为container添加一个__reactContainer属性，其值为root.current
   markContainerAsRoot(root.current, container);
 
   if (enableFloat) {
@@ -253,6 +256,8 @@ export function createRoot(
     container.nodeType === COMMENT_NODE
       ? (container.parentNode: any)
       : container;
+
+  // 为rootContainerElement绑定所有原生事件的监听器， 默认监听捕获阶段
   listenToAllSupportedEvents(rootContainerElement);
 
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
